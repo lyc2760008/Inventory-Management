@@ -6,6 +6,7 @@ const path = require("path");
 const bodyParser = require("body-parser");
 const userRoute = require("./routes/userRoute");
 const productRoute = require("./routes/productRoute");
+const contactRoute = require("./routes/contactRoute");
 const errorHandler = require("./middleWare/errorMiddleWare");
 const cookieParser = require("cookie-parser");
 
@@ -35,6 +36,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use("/api/users", userRoute);
 app.use("/api/product", productRoute);
+app.use("/api/contactus", contactRoute);
 
 //error middleware
 app.use(errorHandler);
