@@ -27,10 +27,10 @@ const Dashboard = () => {
 
   return (
     <div>
-      {/* {products.length > 0 && <ProductSummary products={products} />}
+      {products.length > 0 && <ProductSummary products={products} />}
       {products.length > 0 && (
         <ProductList products={products} isLoading={isLoading} />
-      )} */}
+      )}
     </div>
   );
 };

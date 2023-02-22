@@ -15,6 +15,8 @@ export const registerUser = async (userData) => {
     const response = await axios.post(
       `${BACKEND_URL}/api/users/register`,
       userData,
+      //if you have it in app.js saying 'axios.defaults.withCredentials = true;'
+      //then you do not need the line below, otherwise you'll need it in all axios requests
       { withCredentials: true }
     );
     if (response.statusText === "OK") {
