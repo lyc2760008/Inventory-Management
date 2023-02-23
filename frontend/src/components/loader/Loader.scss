@@ -1,16 +1,25 @@
-/* Loading */
-.wrapper {
+.loader-overlay {
   position: fixed;
   width: 100vw;
   height: 100vh;
   background-color: rgba(0, 0, 0, 0.7);
   z-index: 9;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-.loader {
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 999;
+.loader-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 30px;
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.3);
+}
+
+.loader-container img {
+  max-width: 100%;
 }

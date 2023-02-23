@@ -5,8 +5,8 @@ import "./Loader.scss";
 
 const Loader = () => {
   return ReactDOM.createPortal(
-    <div className="wrapper">
-      <div className="loader">
+    <div className="loader-overlay">
+      <div className="loader-container">
         <img src={loaderImg} alt="Loading..." />
       </div>
     </div>,
