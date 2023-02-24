@@ -42,6 +42,12 @@ const productSchema = mongoose.Schema(
       type: Object,
       default: {},
     },
+    group: {
+      type: String,
+      default: "",
+      required: true,
+      trim: true,
+    },
   },
   {
     timestamps: true,

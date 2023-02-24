@@ -7,6 +7,9 @@ const cloudinary = require("cloudinary").v2;
 const createProduct = asyncHandler(async (req, res) => {
   const { name, sku, category, quantity, price, description } = req.body;
 
+  // Get the group name from the user object attached to the request
+  const group = req.user.group;
+
   //   Validation
   if (!name || !category || !quantity || !price || !description) {
     res.status(400);
@@ -39,6 +42,7 @@ const createProduct = asyncHandler(async (req, res) => {
   // Create Product
   const product = await Product.create({
     user: req.user.id,
+    group,
     name,
     sku,
     category,
@@ -52,8 +56,17 @@ const createProduct = asyncHandler(async (req, res) => {
 });
 
 // Get all Products
+// const getProducts = asyncHandler(async (req, res) => {
+//   const products = await Product.find({ user: req.user.id }).sort("-createdAt");
+//   res.status(200).json(products);
+// });
+
 const getProducts = asyncHandler(async (req, res) => {
-  const products = await Product.find({ user: req.user.id }).sort("-createdAt");
+  // Get the group name from the user object attached to the request
+  const products = await Product.find({ group: req.user.group }).sort(
+    "-createdAt"
+  );
+
   res.status(200).json(products);
 });
 
@@ -66,7 +79,10 @@ const getProduct = asyncHandler(async (req, res) => {
     throw new Error("Product not found");
   }
   // Match product to its user
-  if (product.user.toString() !== req.user.id) {
+  if (
+    product.user.toString() !== req.user.id &&
+    product.group !== req.user.group
+  ) {
     res.status(401);
     throw new Error("User not authorized");
   }
@@ -82,7 +98,10 @@ const deleteProduct = asyncHandler(async (req, res) => {
     throw new Error("Product not found");
   }
   // Match product to its user
-  if (product.user.toString() !== req.user.id) {
+  if (
+    product.user.toString() !== req.user.id &&
+    product.group !== req.user.group
+  ) {
     res.status(401);
     throw new Error("User not authorized");
   }
@@ -103,10 +122,16 @@ const updateProduct = asyncHandler(async (req, res) => {
     throw new Error("Product not found");
   }
   // Match product to its user
-  if (product.user.toString() !== req.user.id) {
+  if (
+    product.user.toString() !== req.user.id &&
+    product.group !== req.user.group
+  ) {
     res.status(401);
     throw new Error("User not authorized");
   }
+
+  // Get the group name from the user object attached to the request
+  const group = req.user.group;
 
   // Handle Image upload
   let fileData = {};

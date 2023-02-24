@@ -13,7 +13,7 @@ const generateToken = (id) => {
 
 // Register User
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, group } = req.body;
 
   // Validation
   if (!name || !email || !password) {
@@ -24,6 +24,9 @@ const registerUser = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error("Password must be up to 6 characters");
   }
+
+  // Set default value for group
+  const userGroup = group || "default";
 
   // Check if user email already exists
   const userExists = await User.findOne({ email });
@@ -38,6 +41,7 @@ const registerUser = asyncHandler(async (req, res) => {
     name,
     email,
     password,
+    group: userGroup,
   });
 
   //   Generate Token
@@ -53,7 +57,7 @@ const registerUser = asyncHandler(async (req, res) => {
   });
 
   if (user) {
-    const { _id, name, email, photo, phone, bio } = user;
+    const { _id, name, email, photo, phone, bio, group } = user;
     res.status(201).json({
       _id,
       name,
@@ -61,6 +65,7 @@ const registerUser = asyncHandler(async (req, res) => {
       photo,
       phone,
       bio,
+      group,
       token,
     });
   } else {
@@ -104,7 +109,7 @@ const loginUser = asyncHandler(async (req, res) => {
     });
   }
   if (user && passwordIsCorrect) {
-    const { _id, name, email, photo, phone, bio } = user;
+    const { _id, name, email, photo, phone, bio, group } = user;
     res.status(200).json({
       _id,
       name,
@@ -112,6 +117,7 @@ const loginUser = asyncHandler(async (req, res) => {
       photo,
       phone,
       bio,
+      group,
       token,
     });
   } else {
@@ -136,7 +142,7 @@ const logout = asyncHandler(async (req, res) => {
 const getUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (user) {
-    const { _id, name, email, photo, phone, bio } = user;
+    const { _id, name, email, photo, phone, bio, group } = user;
     res.status(200).json({
       _id,
       name,
@@ -144,6 +150,7 @@ const getUser = asyncHandler(async (req, res) => {
       photo,
       phone,
       bio,
+      group,
     });
   } else {
     res.status(400);

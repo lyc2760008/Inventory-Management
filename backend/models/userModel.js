@@ -46,6 +46,10 @@ const userSchema = mongoose.Schema(
       ],
       default: "bio",
     },
+    group: {
+      type: String,
+      //required: [true, "Please enter a group."],
+    },
   },
   {
     timestamps: true,

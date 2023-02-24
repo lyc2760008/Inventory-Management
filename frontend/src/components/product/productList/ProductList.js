@@ -97,7 +97,7 @@ const ProductList = ({ products, isLoading }) => {
         {isLoading && <SpinnerImg />}
 
         <div className="table">
-          {!isLoading && products.length === 0 ? (
+          {!isLoading && filteredProducts.length === 0 ? (
             <p>-- No product found, please add a product...</p>
           ) : (
             <table>
