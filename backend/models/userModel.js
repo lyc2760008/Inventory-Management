@@ -50,6 +50,22 @@ const userSchema = mongoose.Schema(
       type: String,
       //required: [true, "Please enter a group."],
     },
+    role: {
+      type: String,
+      default: "user",
+      enum: ["user", "admin"],
+    },
+    approved: {
+      type: Boolean,
+      default: false,
+    },
+    confirmToken: {
+      type: String,
+    },
+    emailConfirmed: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

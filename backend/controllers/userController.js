@@ -36,18 +36,39 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error("Email has already been registered");
   }
 
+  const confirmToken = jwt.sign({ email }, process.env.JWT_SECRET, {
+    expiresIn: "1d",
+  });
+
   // Create new user
   const user = await User.create({
     name,
     email,
     password,
     group: userGroup,
+    role: "user",
+    approved: false,
+    emailConfirmed: false, // Add a new field to store if the email has been confirmed
+    confirmToken, // Store the confirmation token in the user model
   });
 
-  //   Generate Token
-  const token = generateToken(user._id);
+  // Generate Token for approval link
+  const approveToken = generateToken(user._id + "approve");
 
-  // Send HTTP-only cookie
+  // Send approval email
+  const subject = "Account Approval";
+  const message = `Dear Admin, 
+                       A new user with email address ${email} has registered on the platform and needs approval. Please click the link below to approve the user:
+                       ${process.env.FRONTEND_URL}/approve-user/${approveToken}
+                     `;
+  const to = process.env.EMAIL_USER;
+  const from = process.env.EMAIL_USER;
+
+  await sendEmail(subject, message, to, from);
+
+  // Send HTTP-only cookie with login token
+  /////////////////////////////////////////////////////////////////////////
+  const token = generateToken(user._id);
   res.cookie("token", token, {
     path: "/",
     httpOnly: true,
@@ -57,7 +78,7 @@ const registerUser = asyncHandler(async (req, res) => {
   });
 
   if (user) {
-    const { _id, name, email, photo, phone, bio, group } = user;
+    const { _id, name, email, photo, phone, bio, group, role } = user;
     res.status(201).json({
       _id,
       name,
@@ -66,7 +87,9 @@ const registerUser = asyncHandler(async (req, res) => {
       phone,
       bio,
       group,
+      role,
       token,
+      message: "Registration successful. Please wait for approval",
     });
   } else {
     res.status(400);
@@ -92,7 +115,23 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new Error("User not found, please signup");
   }
 
-  // User exists, check if password is correct
+  // Check if user is approved
+  if (!user.approved) {
+    res.status(401);
+    throw new Error(
+      "Your account has not been approved yet. Please wait for approval."
+    );
+  }
+
+  // Check if user is confirmed
+  if (!user.emailConfirmed) {
+    res.status(401);
+    throw new Error(
+      "Your account has not been confirmed to login. Please check your email."
+    );
+  }
+
+  // User exists and is approved, check if password is correct
   const passwordIsCorrect = await bcrypt.compare(password, user.password);
 
   //   Generate Token
@@ -109,7 +148,7 @@ const loginUser = asyncHandler(async (req, res) => {
     });
   }
   if (user && passwordIsCorrect) {
-    const { _id, name, email, photo, phone, bio, group } = user;
+    const { _id, name, email, photo, phone, bio, group, role } = user;
     res.status(200).json({
       _id,
       name,
@@ -118,6 +157,7 @@ const loginUser = asyncHandler(async (req, res) => {
       phone,
       bio,
       group,
+      role,
       token,
     });
   } else {
@@ -142,7 +182,7 @@ const logout = asyncHandler(async (req, res) => {
 const getUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (user) {
-    const { _id, name, email, photo, phone, bio, group } = user;
+    const { _id, name, email, photo, phone, bio, group, role } = user;
     res.status(200).json({
       _id,
       name,
@@ -151,6 +191,28 @@ const getUser = asyncHandler(async (req, res) => {
       phone,
       bio,
       group,
+      role,
+    });
+  } else {
+    res.status(400);
+    throw new Error("User Not Found");
+  }
+});
+
+// Admin only to Get a specific User Data
+const admingGetUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (user) {
+    const { _id, name, email, photo, phone, bio, group, role } = user;
+    res.status(200).json({
+      _id,
+      name,
+      email,
+      photo,
+      phone,
+      bio,
+      group,
+      role,
     });
   } else {
     res.status(400);
@@ -167,6 +229,11 @@ const loggedIn = asyncHandler(async (req, res) => {
   // Verify Token
   const verified = jwt.verify(token, process.env.JWT_SECRET);
   if (verified) {
+    // Check if user is approved
+    const user = await User.findById(verified.id);
+    if (!user || !user.approved) {
+      return res.json(false);
+    }
     return res.json(true);
   }
   return res.json(false);
@@ -317,6 +384,128 @@ const resetPassword = asyncHandler(async (req, res) => {
   });
 });
 
+const getPendingUsers = asyncHandler(async (req, res) => {
+  const pendingUsers = await User.find({ approved: false });
+  res.status(200).json(pendingUsers);
+});
+
+const getApprovedUsers = asyncHandler(async (req, res) => {
+  const approvedUsers = await User.find({ approved: true });
+  res.status(200).json(approvedUsers);
+});
+
+// approve User
+const approveUser = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  const userId = decoded.id.toString().substring(0, 24);
+  const user = await User.findById(userId);
+
+  if (user) {
+    if (user.approved) {
+      res.status(400);
+      throw new Error("User is already approved");
+    }
+
+    user.approved = true;
+
+    const updatedUser = await user.save();
+
+    // Send email to user
+    const confirmToken = jwt.sign(
+      { id: updatedUser._id },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "1d",
+      }
+    );
+    const message = `
+      <h2>Hello ${updatedUser.name}</h2>
+      <p>Your registration to our app has been approved!</p>  
+      <p>Please click the following link to confirm your registration:</p>
+      <a href="${process.env.FRONTEND_URL}/complete-registration/${confirmToken}">${process.env.FRONTEND_URL}/complete-registration/${confirmToken}</a>
+      <p>Regards...</p>
+      <p>Yichen Team</p>
+    `;
+    const subject = "Registration Approved";
+    const send_to = user.email;
+    const sent_from = process.env.EMAIL_USER;
+
+    try {
+      await sendEmail(subject, message, send_to, sent_from);
+    } catch (error) {
+      console.error("Error sending approval email: ", error);
+    }
+
+    res.status(200).json({
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      photo: updatedUser.photo,
+      phone: updatedUser.phone,
+      bio: updatedUser.bio,
+      group: updatedUser.group,
+      role: updatedUser.role,
+      approved: updatedUser.approved,
+    });
+  } else {
+    res.status(404);
+    throw new Error("User not found");
+  }
+});
+
+// complete Registration
+const completeRegistration = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  const userId = decoded.id.toString().substring(0, 24);
+  const user = await User.findById(userId);
+
+  if (user) {
+    if (user.emailConfirmed) {
+      res.status(400);
+      throw new Error("Email is already confirmed");
+    }
+
+    user.emailConfirmed = true;
+
+    const updatedUser = await user.save();
+
+    // Send welcome email
+    const message = `
+      <h2>Hello ${user.name}</h2>
+      <p>Thank you for registering on our app. Your account is now fully approved and you can start using our app.</p>  
+      <p>Regards...</p>
+      <p>Yichen Team</p>
+    `;
+    const subject = "Registration Complete";
+    const send_to = user.email;
+    const sent_from = process.env.EMAIL_USER;
+
+    try {
+      await sendEmail(subject, message, send_to, sent_from);
+    } catch (error) {
+      console.error("Error sending welcome email: ", error);
+    }
+
+    res.status(200).json({
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      photo: updatedUser.photo,
+      phone: updatedUser.phone,
+      bio: updatedUser.bio,
+      group: updatedUser.group,
+      role: updatedUser.role,
+      approved: updatedUser.approved,
+      emailConfirmed: updatedUser.emailConfirmed,
+    });
+  } else {
+    res.status(404);
+    throw new Error("completeRegistration User not found!!!");
+  }
+});
+
 module.exports = {
   registerUser,
   loginUser,
@@ -327,4 +516,9 @@ module.exports = {
   changePassword,
   forgotPassword,
   resetPassword,
+  getPendingUsers,
+  getApprovedUsers,
+  approveUser,
+  admingGetUser,
+  completeRegistration,
 };

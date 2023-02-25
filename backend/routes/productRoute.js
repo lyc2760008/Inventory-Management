@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const protect = require("../middleWare/authMiddleWare");
+const { protect, authorize } = require("../middleWare/authMiddleWare");
 const {
   createProduct,
   getProducts,

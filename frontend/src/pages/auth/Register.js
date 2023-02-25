@@ -52,11 +52,12 @@ const Register = () => {
     setIsLoading(true);
     try {
       const data = await registerUser(userData);
-      // console.log(data);
-      await dispatch(SET_LOGIN(true));
+      //console.log(data);
+      await dispatch(SET_LOGIN(false));
       await dispatch(SET_NAME(data.name));
-      navigate("/dashboard");
+      navigate("/");
       setIsLoading(false);
+      toast.success("Registration successful. Please wait for approval");
     } catch (error) {
       setIsLoading(false);
     }

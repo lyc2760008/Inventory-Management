@@ -20,6 +20,8 @@ import EditProduct from "./pages/editProduct/EditProduct";
 import Profile from "./pages/profile/Profile";
 import EditProfile from "./pages/profile/EditProfile";
 import Contact from "./pages/contact/Contact";
+import ApproveUser from "./pages/approveUser/ApproveUser";
+import CompleteRegistration from "./pages/approveUser/CompleteRegistration";
 
 axios.defaults.withCredentials = true;
 
@@ -43,6 +45,11 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot" element={<Forgot />} />
         <Route path="/resetpassword/:resetToken" element={<Reset />} />
+        <Route path="/approve-user/:token" element={<ApproveUser />} />
+        <Route
+          path="/complete-registration/:token"
+          element={<CompleteRegistration />}
+        />
 
         <Route
           path="/dashboard"
